@@ -300,8 +300,13 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       extensions: <String>['mp3', 'MP3'],
     );
 
+    const XTypeGroup m4aTypeGroup = XTypeGroup(
+      label: 'm4a',
+      extensions: <String>['m4a', 'M4A'],
+    );
+
     final List<XFile> files = await openFiles(acceptedTypeGroups: <XTypeGroup>[
-      mp3TypeGroup,
+      mp3TypeGroup,m4aTypeGroup
     ]);
     if (files.isEmpty) return;
 
@@ -309,7 +314,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     List<String> saveFlies = [];
 
     for (var f in files) {
-      final name = f.name.replaceAll(RegExp(r'.mp3|.MP3'), '');
+      final name = f.name.replaceAll(RegExp(r'.mp3|.MP3|m4a|M4A'), '');
       final m =
           AudioMetadata(title: name, artwork: 'images/music.png', path: f.path);
       await _playlist.add(AudioSource.uri(Uri.file(f.path), tag: m));
