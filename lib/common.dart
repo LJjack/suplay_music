@@ -24,7 +24,7 @@ void showSliderDialog({
       title: Text(title, textAlign: TextAlign.center),
       content: StreamBuilder<double>(
         stream: stream,
-        builder: (context, snapshot) => Container(
+        builder: (context, snapshot) => SizedBox(
           height: 100.0,
           child: Column(
             children: [

@@ -30,7 +30,7 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> with WidgetsBindingObserver {
   late AudioPlayer _player;
   double sliderValue = 0.5;
-  final _globalKey = GlobalKey();
+  final _addGlobalKey = GlobalKey();
   final _playlist = ConcatenatingAudioSource(children: [
     AudioSource.uri(
       Uri.parse("https://s3.amazonaws.com/scifri-segments/scifri201711241.mp3"),
@@ -45,7 +45,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance?.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
     _player = AudioPlayer();
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.black,
@@ -89,7 +89,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    WidgetsBinding.instance?.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this);
     _player.dispose();
     super.dispose();
   }
@@ -208,32 +208,42 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                     ),
                     ControlButtons(player: _player),
                     IconButton(
-                        key: _globalKey,
-                        onPressed: () async {
-                          // await _openMusicFile();
-
-                          RenderBox renderBox = _globalKey.currentContext
-                              ?.findRenderObject() as RenderBox;
-                          Rect box = renderBox.localToGlobal(Offset.zero) &
-                              renderBox.size;
-                          Navigator.push(
-                              context,
-                              DropDownMenuRouter(
-                                position: box,
-                                menuHeight: 200,
-                                menuWidth: 40,
-                                itemView: Container(
-                                  color: Colors.deepPurple,
-                                ),
-                              ));
+                        key: _addGlobalKey,
+                        onPressed: () {
+                          Navigator.push(context, addAlertMenu());
                         },
-                        icon: const Icon(Icons.add))
+                        icon: const Icon(Icons.add)),
                   ],
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  DropDownMenuRouter addAlertMenu() {
+    RenderBox renderBox =
+        _addGlobalKey.currentContext?.findRenderObject() as RenderBox;
+    Rect box = renderBox.localToGlobal(Offset.zero) & renderBox.size;
+    box = box.translate(-50, 0);
+    return DropDownMenuRouter(
+      position: box,
+      menuWidth: 80,
+      menuHeight: 60,
+      itemView: Container(
+        color: Color(0xFFF5F5F5),
+        child: Column(children: [
+          TextButton(onPressed: () async{
+            await _openMusicFile();
+          } , child: const Text("添加音频")),
+          TextButton(onPressed: () async {
+           await _playlist.clear();
+
+          } , child: const Text("清除音频")),
+
+        ],),
       ),
     );
   }
@@ -285,7 +295,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
 
   /// Screen that shows an example of openFiles
   Future<void> _openMusicFile() async {
-    final XTypeGroup mp3TypeGroup = XTypeGroup(
+    const XTypeGroup mp3TypeGroup = XTypeGroup(
       label: 'MP3',
       extensions: <String>['mp3', 'MP3'],
     );
