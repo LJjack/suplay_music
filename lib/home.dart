@@ -19,6 +19,7 @@ import 'package:suplay_music/drop_down_menu.dart';
 
 import 'audio_metadata.dart';
 import 'control_buttons.dart';
+import 'marquee.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -150,69 +151,74 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               ),
 
               Container(
-                // color: Colors.green,
                 margin: const EdgeInsets.symmetric(horizontal: 10),
                 height: 60,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Stack(
                   children: [
-                    StreamBuilder<SequenceState?>(
-                      stream: _player.sequenceStateStream,
-                      builder: (context, snapshot) {
-                        final state = snapshot.data;
-                        if (state?.sequence.isEmpty ?? true) {
-                          return const SizedBox();
-                        }
-                        final metadata =
-                            state!.currentSource!.tag as AudioMetadata;
-                        return Row(
-                          children: [
-                            Container(
-                              margin: const EdgeInsets.all(8.0),
-                              width: 60,
-                              height: 60,
-                              child: metadata.artwork
-                                      .startsWith(RegExp(r'http|https'))
-                                  ? Image.network(metadata.artwork)
-                                  : Image.asset(metadata.artwork),
-                            ),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        StreamBuilder<SequenceState?>(
+                          stream: _player.sequenceStateStream,
+                          builder: (context, snapshot) {
+                            final state = snapshot.data;
+                            if (state?.sequence.isEmpty ?? true) {
+                              return const SizedBox();
+                            }
+                            final metadata =
+                                state!.currentSource!.tag as AudioMetadata;
+                            return Row(
                               children: [
-                                Text(
-                                  metadata.title,
-                                  style: const TextStyle(fontSize: 14),
+                                Container(
+                                  margin: const EdgeInsets.all(8.0),
+                                  width: 60,
+                                  height: 60,
+                                  child: metadata.artwork
+                                          .startsWith(RegExp(r'http|https'))
+                                      ? Image.network(metadata.artwork)
+                                      : Image.asset(metadata.artwork),
                                 ),
-                                StreamBuilder<PositionData>(
-                                  stream: _positionDataStream,
-                                  builder: (context, snapshot) {
-                                    final positionData = snapshot.data;
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildShowNameText(metadata.title),
+                                    StreamBuilder<PositionData>(
+                                      stream: _positionDataStream,
+                                      builder: (context, snapshot) {
+                                        final positionData = snapshot.data;
 
-                                    final textTime =
-                                        handleTime(positionData?.position) +
+                                        final textTime = handleTime(
+                                                positionData?.position) +
                                             " / " +
                                             handleTime(positionData?.duration);
 
-                                    return Text(textTime,
-                                        style: const TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.black54));
-                                  },
+                                        return Text(textTime,
+                                            style: const TextStyle(
+                                                fontSize: 10,
+                                                color: Colors.black54));
+                                      },
+                                    )
+                                  ],
                                 )
                               ],
-                            )
-                          ],
-                        );
-                      },
+                            );
+                          },
+                        ),
+                        IconButton(
+                            key: _addGlobalKey,
+                            onPressed: () {
+                              Navigator.push(context, addAlertMenu());
+                            },
+                            icon: const Icon(Icons.add)),
+                      ],
                     ),
-                    ControlButtons(player: _player),
-                    IconButton(
-                        key: _addGlobalKey,
-                        onPressed: () {
-                          Navigator.push(context, addAlertMenu());
-                        },
-                        icon: const Icon(Icons.add)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ControlButtons(player: _player),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -223,6 +229,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     );
   }
 
+  //添加弹出框，添加和清除音频
   DropDownMenuRouter addAlertMenu() {
     RenderBox renderBox =
         _addGlobalKey.currentContext?.findRenderObject() as RenderBox;
@@ -233,17 +240,21 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       menuWidth: 80,
       menuHeight: 60,
       itemView: Container(
-        color: Color(0xFFF5F5F5),
-        child: Column(children: [
-          TextButton(onPressed: () async{
-            await _openMusicFile();
-          } , child: const Text("添加音频")),
-          TextButton(onPressed: () async {
-           await _playlist.clear();
-
-          } , child: const Text("清除音频")),
-
-        ],),
+        color: const Color(0xFFF5F5F5),
+        child: Column(
+          children: [
+            TextButton(
+                onPressed: () async {
+                  await _openMusicFile();
+                },
+                child: const Text("添加音频")),
+            TextButton(
+                onPressed: () async {
+                  await _playlist.clear();
+                },
+                child: const Text("清除音频")),
+          ],
+        ),
       ),
     );
   }
@@ -293,7 +304,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     );
   }
 
-  /// Screen that shows an example of openFiles
+  /// 获取本地音频
   Future<void> _openMusicFile() async {
     const XTypeGroup mp3TypeGroup = XTypeGroup(
       label: 'MP3',
@@ -305,9 +316,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       extensions: <String>['m4a', 'M4A'],
     );
 
-    final List<XFile> files = await openFiles(acceptedTypeGroups: <XTypeGroup>[
-      mp3TypeGroup,m4aTypeGroup
-    ]);
+    final List<XFile> files = await openFiles(
+        acceptedTypeGroups: <XTypeGroup>[mp3TypeGroup, m4aTypeGroup]);
     if (files.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -331,5 +341,19 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             .firstMatch("$duration")
             ?.group(1) ??
         '$duration';
+  }
+
+  Widget _buildShowNameText(String txt) {
+    return SizedBox(
+        width: 150,
+        height: 30,
+        child: Marquee(
+          text: txt,
+          style: const TextStyle(
+            fontSize: 14,
+          ),
+          blankSpace: 20.0,
+          startPadding: 10.0,
+        ));
   }
 }
