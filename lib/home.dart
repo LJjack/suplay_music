@@ -251,6 +251,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             TextButton(
                 onPressed: () async {
                   await _playlist.clear();
+                  final prefs = await SharedPreferences.getInstance();
+                 await prefs.remove('k_music_list');
                 },
                 child: const Text("清除音频")),
           ],
@@ -259,6 +261,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     );
   }
 
+  ///列表
   Widget menuList() {
     return Expanded(
       child: StreamBuilder<SequenceState?>(
@@ -283,8 +286,16 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                       child: Icon(Icons.delete, color: Colors.white),
                     ),
                   ),
-                  onDismissed: (dismissDirection) {
+                  onDismissed: (dismissDirection) async {
                     _playlist.removeAt(i);
+
+                    final prefs = await SharedPreferences.getInstance();
+                    var files = prefs.getStringList('k_music_list');
+
+                    if (files != null) {
+                      files.removeAt(i);
+                      await prefs.setStringList('k_music_list', files);
+                    }
                   },
                   child: Material(
                     color:
