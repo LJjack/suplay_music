@@ -32,16 +32,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   late AudioPlayer _player;
   double sliderValue = 0.5;
   final _addGlobalKey = GlobalKey();
-  final _playlist = ConcatenatingAudioSource(children: [
-    AudioSource.uri(
-      Uri.parse("https://s3.amazonaws.com/scifri-segments/scifri201711241.mp3"),
-      tag: AudioMetadata(
-        title: "Science Friday",
-        artwork: "images/music.png",
-        path: "images/music.png",
-      ),
-    )
-  ]);
+  final _playlist = ConcatenatingAudioSource(children: []);
 
   @override
   void initState() {
@@ -98,9 +89,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      // Release the player's resources when not in use. We use "stop" so that
-      // if the app resumes later, it will still remember what position to
-      // resume from.
       _player.stop();
     }
   }
