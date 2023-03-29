@@ -4,12 +4,12 @@
 /// @Date 2022/4/24 16:52
 ///
 /// @Description TODO
-import 'dart:convert';
+import 'dart:convert' show jsonEncode;
 
 class AudioMetadata {
-  String title;
-  String artwork;
-  String path;
+  final String title;
+  final String artwork;
+  final String path;
 
   AudioMetadata({
     required this.title,
@@ -25,6 +25,7 @@ class AudioMetadata {
     );
   }
 
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'title': title,
         'artwork': artwork,
@@ -32,7 +33,7 @@ class AudioMetadata {
       };
 
   String toJsonString() {
-    return jsonEncode(this);
+    return jsonEncode( toJson());
   }
 }
 
