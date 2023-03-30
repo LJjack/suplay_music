@@ -6,20 +6,16 @@
 /// @Description 音乐主页
 import 'dart:convert';
 
-import 'package:audio_session/audio_session.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:suplay_music/capacity_indicators.dart';
 import 'package:suplay_music/drop_down_menu.dart';
+import 'package:suplay_music/player_widget.dart';
 
 import 'audio_metadata.dart';
-import 'control_buttons.dart';
-import 'marquee.dart';
+
+import 'package:audioplayers/audioplayers.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -29,89 +25,46 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> with WidgetsBindingObserver {
-  late AudioPlayer _player;
+  List<AudioMetadata> playerModels = [];
+  int currentPlayerIdx = 0;
+
+  late AudioPlayer player;
+
+  AudioMetadata? get currentPlayerModel {
+    if (currentPlayerIdx >= playerModels.length) {
+      return null;
+    }
+
+    return playerModels[currentPlayerIdx];
+  }
+
   double sliderValue = 0.5;
   final _addGlobalKey = GlobalKey();
-  final _playlist = ConcatenatingAudioSource(children: [
-    AudioSource.uri(
-      Uri.parse("https://s3.amazonaws.com/scifri-segments/scifri201711241.mp3"),
-      tag: AudioMetadata(
-        title: "Science Friday",
-        artwork: "images/music.png",
-        path: "images/music.png",
-      ),
-    )
-  ]);
 
   @override
   void initState() {
+    player = AudioPlayer()..setReleaseMode(ReleaseMode.stop);
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _player = AudioPlayer();
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.black,
-    ));
-    _init();
-  }
 
-  Future<void> _init() async {
-    final session = await AudioSession.instance;
-    await session.configure(const AudioSessionConfiguration.speech());
-    // Listen to errors during playback.
-    _player.playbackEventStream.listen((event) {},
-        onError: (Object e, StackTrace stackTrace) {
-      if (kDebugMode) {
-        print('A stream error occurred: $e');
-      }
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+      await getSaveMusic();
     });
-    try {
-      await _player.setAudioSource(_playlist, preload: false);
-    } catch (e) {
-      if (kDebugMode) {
-        print("Error loading audio source: $e");
-      }
-    }
-
-    await getSaveMusic();
-  }
-
-  Future<void> getSaveMusic() async {
-    final prefs = await SharedPreferences.getInstance();
-    final files = prefs.getStringList('k_music_list');
-    await _playlist.clear();
-    if (files != null && files.isNotEmpty) {
-      await _playlist.addAll(files.map((e) {
-        final m = AudioMetadata.fromJson(jsonDecode(e));
-        return AudioSource.uri(Uri.file(m.path), tag: m);
-      }).toList());
-      await _player.load();
-    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _player.dispose();
+    player.release();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      // Release the player's resources when not in use. We use "stop" so that
-      // if the app resumes later, it will still remember what position to
-      // resume from.
-      _player.stop();
+      player.stop();
     }
   }
-
-  Stream<PositionData> get _positionDataStream =>
-      Rx.combineLatest3<Duration, Duration, Duration?, PositionData>(
-          _player.positionStream,
-          _player.bufferedPositionStream,
-          _player.durationStream,
-          (position, bufferedPosition, duration) => PositionData(
-              position, bufferedPosition, duration ?? Duration.zero));
 
   @override
   Widget build(BuildContext context) {
@@ -124,101 +77,38 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               menuList(),
-
-              ///进度条
-              StreamBuilder<PositionData>(
-                stream: _positionDataStream,
-                builder: (context, snapshot) {
-                  final positionData = snapshot.data;
-                  final position = positionData?.position ?? Duration.zero;
-                  final duration = positionData?.duration ?? Duration.zero;
-                  final bufferedPosition =
-                      positionData?.bufferedPosition ?? Duration.zero;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                    child: CapacityIndicator(
-                      color: Colors.red,
-                      bufferedColor: Colors.red.shade100,
-                      initialValue: position.inMilliseconds.toDouble(),
-                      max: duration.inMilliseconds.toDouble(),
-                      bufferedValue: bufferedPosition.inMilliseconds.toDouble(),
-                      onChanged: (v) {
-                        _player.seek(Duration(milliseconds: v.round()));
-                      },
-                    ),
-                  );
-                },
-              ),
-
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 10),
-                height: 60,
+                height: 70,
                 child: Stack(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        StreamBuilder<SequenceState?>(
-                          stream: _player.sequenceStateStream,
-                          builder: (context, snapshot) {
-                            final state = snapshot.data;
-                            if (state?.sequence.isEmpty ?? true) {
-                              return const SizedBox();
-                            }
-                            final metadata =
-                                state!.currentSource!.tag as AudioMetadata;
-                            return Row(
-                              children: [
-                                Container(
-                                  margin: const EdgeInsets.all(8.0),
-                                  width: 60,
-                                  height: 60,
-                                  child: metadata.artwork
-                                          .startsWith(RegExp(r'http|https'))
-                                      ? Image.network(metadata.artwork)
-                                      : Image.asset(metadata.artwork),
-                                ),
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildShowNameText(metadata.title),
-                                    StreamBuilder<PositionData>(
-                                      stream: _positionDataStream,
-                                      builder: (context, snapshot) {
-                                        final positionData = snapshot.data;
-
-                                        final textTime = handleTime(
-                                                positionData?.position) +
-                                            " / " +
-                                            handleTime(positionData?.duration);
-
-                                        return Text(textTime,
-                                            style: const TextStyle(
-                                                fontSize: 10,
-                                                color: Colors.black54));
-                                      },
-                                    )
-                                  ],
-                                )
-                              ],
-                            );
-                          },
-                        ),
-                        IconButton(
+                    PlayerWidget(
+                      player: player,
+                      model: currentPlayerModel,
+                      onPreviousPressed: () async {
+                        int newIndex = currentPlayerIdx;
+                        newIndex--;
+                        newIndex %= playerModels.length;
+                        await playMusic(index: newIndex);
+                        setState(() {});
+                      },
+                      onNextPressed: () async {
+                        int newIndex = currentPlayerIdx;
+                        newIndex++;
+                        newIndex %= playerModels.length;
+                        await playMusic(index: newIndex);
+                        setState(() {});
+                      },
+                    ),
+                    Positioned(
+                        top: 15,
+                        right: 0,
+                        child: IconButton(
                             key: _addGlobalKey,
                             onPressed: () {
                               Navigator.push(context, addAlertMenu());
                             },
-                            icon: const Icon(Icons.add)),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ControlButtons(player: _player),
-                      ],
-                    ),
+                            icon: const Icon(Icons.add))),
                   ],
                 ),
               ),
@@ -232,7 +122,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   //添加弹出框，添加和清除音频
   DropDownMenuRouter addAlertMenu() {
     RenderBox renderBox =
-        _addGlobalKey.currentContext?.findRenderObject() as RenderBox;
+    _addGlobalKey.currentContext?.findRenderObject() as RenderBox;
     Rect box = renderBox.localToGlobal(Offset.zero) & renderBox.size;
     box = box.translate(-50, 0);
     return DropDownMenuRouter(
@@ -250,9 +140,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                 child: const Text("添加音频")),
             TextButton(
                 onPressed: () async {
-                  await _playlist.clear();
-                  final prefs = await SharedPreferences.getInstance();
-                 await prefs.remove('k_music_list');
+                  await _clearAllMusic();
                 },
                 child: const Text("清除音频")),
           ],
@@ -264,58 +152,68 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   ///列表
   Widget menuList() {
     return Expanded(
-      child: StreamBuilder<SequenceState?>(
-        stream: _player.sequenceStateStream,
-        builder: (context, snapshot) {
-          final state = snapshot.data;
-          final sequence = state?.sequence ?? [];
-          return ReorderableListView(
-            onReorder: (int oldIndex, int newIndex) {
-              if (oldIndex < newIndex) newIndex--;
-              _playlist.move(oldIndex, newIndex);
-            },
-            children: [
-              for (var i = 0; i < sequence.length; i++)
-                Dismissible(
-                  key: ValueKey(sequence[i]),
-                  background: Container(
-                    color: Colors.redAccent,
-                    alignment: Alignment.centerRight,
-                    child: const Padding(
-                      padding: EdgeInsets.only(right: 8.0),
-                      child: Icon(Icons.delete, color: Colors.white),
-                    ),
-                  ),
-                  onDismissed: (dismissDirection) async {
-                    _playlist.removeAt(i);
+      child: ReorderableListView.builder(
+          itemBuilder: (context, index) {
+            final mm = playerModels[index];
 
-                    final prefs = await SharedPreferences.getInstance();
-                    var files = prefs.getStringList('k_music_list');
-
-                    if (files != null) {
-                      files.removeAt(i);
-                      await prefs.setStringList('k_music_list', files);
-                    }
-                  },
-                  child: Material(
-                    color:
-                        i == state!.currentIndex ? Colors.grey.shade300 : null,
-                    child: ListTile(
-                      title: Text(sequence[i].tag.title as String),
-                      onTap: () {
-                        _player.seek(Duration.zero, index: i);
-                      },
-                    ),
-                  ),
+            return Dismissible(
+              key: ValueKey(mm),
+              background: Container(
+                color: Colors.redAccent,
+                alignment: Alignment.centerRight,
+                child: const Padding(
+                  padding: EdgeInsets.only(right: 8.0),
+                  child: Icon(Icons.delete, color: Colors.white),
                 ),
-            ],
-          );
-        },
-      ),
+              ),
+              onDismissed: (dismissDirection) async {
+                playerModels.removeAt(index);
+
+                final prefs = await SharedPreferences.getInstance();
+                var files = prefs.getStringList('k_music_list');
+
+                if (files != null) {
+                  files.removeAt(index);
+                  await prefs.setStringList('k_music_list', files);
+                }
+              },
+              child: Material(
+                color: index == currentPlayerIdx ? Colors.grey.shade300 : null,
+                child: ListTile(
+                  title: Text(mm.title),
+                  onTap: () async {
+                    await playMusic(index: index);
+                    setState(() {});
+                  },
+                ),
+              ),
+            );
+          },
+          itemCount: playerModels.length,
+          onReorder: (int oldIndex, int newIndex) {
+            if (oldIndex < newIndex) newIndex--;
+            playerModels.insert(newIndex, playerModels.removeAt(oldIndex));
+          }),
     );
   }
 
-  /// 获取本地音频
+  Future<void> getSaveMusic() async {
+    playerModels.clear();
+
+    final prefs = await SharedPreferences.getInstance();
+    final files = prefs.getStringList('k_music_list') ?? [];
+    for (var dict in files) {
+      final m = AudioMetadata.fromJson(jsonDecode(dict));
+print(m.toJson());
+      playerModels.add(m);
+    }
+
+    setState(() {});
+
+    await playMusic();
+  }
+
+  /// 添加本地音频
   Future<void> _openMusicFile() async {
     const XTypeGroup mp3TypeGroup = XTypeGroup(
       label: 'MP3',
@@ -330,41 +228,44 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     final List<XFile> files = await openFiles(
         acceptedTypeGroups: <XTypeGroup>[mp3TypeGroup, m4aTypeGroup]);
     if (files.isEmpty) return;
-
+    EasyLoading.show();
     final prefs = await SharedPreferences.getInstance();
     List<String> saveFlies = [];
 
     for (var f in files) {
       final name = f.name.replaceAll(RegExp(r'.mp3|.MP3|m4a|M4A'), '');
       final m =
-          AudioMetadata(title: name, artwork: 'images/music.png', path: f.path);
-      await _playlist.add(AudioSource.uri(Uri.file(f.path), tag: m));
+      AudioMetadata(title: name, artwork: 'images/music.png', path: f.path);
+
+      playerModels.add(m);
       saveFlies.add(m.toJsonString());
     }
-    await _player.load();
     await prefs.setStringList('k_music_list', saveFlies);
+    EasyLoading.dismiss();
+
+    setState(() {});
+
+    await playMusic();
   }
 
-  String handleTime(Duration? duration) {
-    if (duration == null) return '';
+  Future<void> _clearAllMusic() async {
+    EasyLoading.show();
+    await player.release();
+    playerModels.clear();
 
-    return RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})\.\d+$')
-            .firstMatch("$duration")
-            ?.group(1) ??
-        '$duration';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('k_music_list');
+    EasyLoading.dismiss();
+    setState(() {});
   }
 
-  Widget _buildShowNameText(String txt) {
-    return SizedBox(
-        width: 150,
-        height: 30,
-        child: Marquee(
-          text: txt,
-          style: const TextStyle(
-            fontSize: 14,
-          ),
-          blankSpace: 20.0,
-          startPadding: 10.0,
-        ));
+  Future playMusic({int index = 0}) async {
+    if (playerModels.isEmpty) return;
+    if (player.state == PlayerState.playing) {
+      await player.stop();
+    }
+print(currentPlayerModel!.path);
+    currentPlayerIdx = index;
+    await player.play(DeviceFileSource("/Users/liujunjie/Desktop/音视频/每天听书/0321心是孤独的猎手.mp3"));
   }
 }
