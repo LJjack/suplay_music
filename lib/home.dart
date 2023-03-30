@@ -9,7 +9,6 @@ import 'dart:convert';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:suplay_music/drop_down_menu.dart';
 import 'package:suplay_music/player_widget.dart';
 
@@ -46,10 +45,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     player = AudioPlayer()..setReleaseMode(ReleaseMode.stop);
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
-      await getSaveMusic();
-    });
   }
 
   @override
@@ -169,13 +164,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               onDismissed: (dismissDirection) async {
                 playerModels.removeAt(index);
 
-                final prefs = await SharedPreferences.getInstance();
-                var files = prefs.getStringList('k_music_list');
-
-                if (files != null) {
-                  files.removeAt(index);
-                  await prefs.setStringList('k_music_list', files);
-                }
               },
               child: Material(
                 color: index == currentPlayerIdx ? Colors.grey.shade300 : null,
@@ -197,21 +185,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> getSaveMusic() async {
-    playerModels.clear();
-
-    final prefs = await SharedPreferences.getInstance();
-    final files = prefs.getStringList('k_music_list') ?? [];
-    for (var dict in files) {
-      final m = AudioMetadata.fromJson(jsonDecode(dict));
-print(m.toJson());
-      playerModels.add(m);
-    }
-
-    setState(() {});
-
-    await playMusic();
-  }
 
   /// 添加本地音频
   Future<void> _openMusicFile() async {
@@ -229,7 +202,6 @@ print(m.toJson());
         acceptedTypeGroups: <XTypeGroup>[mp3TypeGroup, m4aTypeGroup]);
     if (files.isEmpty) return;
     EasyLoading.show();
-    final prefs = await SharedPreferences.getInstance();
     List<String> saveFlies = [];
 
     for (var f in files) {
@@ -240,7 +212,6 @@ print(m.toJson());
       playerModels.add(m);
       saveFlies.add(m.toJsonString());
     }
-    await prefs.setStringList('k_music_list', saveFlies);
     EasyLoading.dismiss();
 
     setState(() {});
@@ -253,8 +224,6 @@ print(m.toJson());
     await player.release();
     playerModels.clear();
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('k_music_list');
     EasyLoading.dismiss();
     setState(() {});
   }
@@ -264,8 +233,7 @@ print(m.toJson());
     if (player.state == PlayerState.playing) {
       await player.stop();
     }
-print(currentPlayerModel!.path);
     currentPlayerIdx = index;
-    await player.play(DeviceFileSource("/Users/liujunjie/Desktop/音视频/每天听书/0321心是孤独的猎手.mp3"));
+    await player.play(DeviceFileSource(currentPlayerModel!.path));
   }
 }
