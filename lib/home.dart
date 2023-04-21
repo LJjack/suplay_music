@@ -4,7 +4,6 @@
 /// @Date 2022/4/24 16:24
 ///
 /// @Description 音乐主页
-import 'dart:convert';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:file_selector/file_selector.dart';
@@ -13,13 +12,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:suplay_music/capacity_indicators.dart';
-import 'package:suplay_music/drop_down_menu.dart';
+import 'widgets/capacity_indicators.dart';
+import 'widgets/popup.dart';
 
 import 'audio_metadata.dart';
-import 'control_buttons.dart';
-import 'marquee.dart';
+import 'widgets/control_buttons.dart';
+import 'widgets/marquee.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -67,16 +65,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   }
 
   Future<void> getSaveMusic() async {
-    final prefs = await SharedPreferences.getInstance();
-    final files = prefs.getStringList('k_music_list');
     await _playlist.clear();
-    if (files != null && files.isNotEmpty) {
-      await _playlist.addAll(files.map((e) {
-        final m = AudioMetadata.fromJson(jsonDecode(e));
-        return AudioSource.uri(Uri.file(m.path), tag: m);
-      }).toList());
-      await _player.load();
-    }
   }
 
   @override
@@ -196,7 +185,32 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                         IconButton(
                             key: _addGlobalKey,
                             onPressed: () {
-                              Navigator.push(context, addAlertMenu());
+                              RenderBox renderBox = _addGlobalKey.currentContext
+                                  ?.findRenderObject() as RenderBox;
+                              Rect box = renderBox.localToGlobal(Offset.zero) &
+                                  renderBox.size;
+                              box = box.translate(-50, -60);
+
+                              Popup.showPopupWindow(
+                                  context: context,
+                                  offset: box.topLeft,
+                                  child: (closeFunc) => Padding(
+                                        padding: const EdgeInsets.all(10),
+                                        child: Column(
+                                          children: [
+                                            TextButton(
+                                                onPressed: () async {
+                                                  await _openMusicFile();
+                                                },
+                                                child: const Text("添加音频")),
+                                            TextButton(
+                                                onPressed: () async {
+                                                  await _playlist.clear();
+                                                },
+                                                child: const Text("清除音频")),
+                                          ],
+                                        ),
+                                      ));
                             },
                             icon: const Icon(Icons.add)),
                       ],
@@ -212,38 +226,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  //添加弹出框，添加和清除音频
-  DropDownMenuRouter addAlertMenu() {
-    RenderBox renderBox =
-        _addGlobalKey.currentContext?.findRenderObject() as RenderBox;
-    Rect box = renderBox.localToGlobal(Offset.zero) & renderBox.size;
-    box = box.translate(-50, 0);
-    return DropDownMenuRouter(
-      position: box,
-      menuWidth: 80,
-      menuHeight: 60,
-      itemView: Container(
-        color: const Color(0xFFF5F5F5),
-        child: Column(
-          children: [
-            TextButton(
-                onPressed: () async {
-                  await _openMusicFile();
-                },
-                child: const Text("添加音频")),
-            TextButton(
-                onPressed: () async {
-                  await _playlist.clear();
-                  final prefs = await SharedPreferences.getInstance();
-                 await prefs.remove('k_music_list');
-                },
-                child: const Text("清除音频")),
-          ],
         ),
       ),
     );
@@ -276,14 +258,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   ),
                   onDismissed: (dismissDirection) async {
                     _playlist.removeAt(i);
-
-                    final prefs = await SharedPreferences.getInstance();
-                    var files = prefs.getStringList('k_music_list');
-
-                    if (files != null) {
-                      files.removeAt(i);
-                      await prefs.setStringList('k_music_list', files);
-                    }
                   },
                   child: Material(
                     color:
@@ -319,7 +293,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         acceptedTypeGroups: <XTypeGroup>[mp3TypeGroup, m4aTypeGroup]);
     if (files.isEmpty) return;
 
-    final prefs = await SharedPreferences.getInstance();
     List<String> saveFlies = [];
 
     for (var f in files) {
@@ -330,7 +303,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       saveFlies.add(m.toJsonString());
     }
     await _player.load();
-    await prefs.setStringList('k_music_list', saveFlies);
   }
 
   String handleTime(Duration? duration) {
