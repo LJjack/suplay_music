@@ -189,7 +189,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                                   ?.findRenderObject() as RenderBox;
                               Rect box = renderBox.localToGlobal(Offset.zero) &
                                   renderBox.size;
-                              box = box.translate(-50, -60);
+                              box = box.translate(-60, -60);
 
                               Popup.showPopupWindow(
                                   context: context,
