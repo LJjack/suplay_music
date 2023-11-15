@@ -99,132 +99,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              menuList(),
-
-              ///进度条
-              StreamBuilder<PositionData>(
-                stream: _positionDataStream,
-                builder: (context, snapshot) {
-                  final positionData = snapshot.data;
-                  final position = positionData?.position ?? Duration.zero;
-                  final duration = positionData?.duration ?? Duration.zero;
-                  final bufferedPosition =
-                      positionData?.bufferedPosition ?? Duration.zero;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                    child: CapacityIndicator(
-                      color: Colors.red,
-                      bufferedColor: Colors.red.shade100,
-                      initialValue: position.inMilliseconds.toDouble(),
-                      max: duration.inMilliseconds.toDouble(),
-                      bufferedValue: bufferedPosition.inMilliseconds.toDouble(),
-                      onChanged: (v) {
-                        _player.seek(Duration(milliseconds: v.round()));
-                      },
-                    ),
-                  );
-                },
-              ),
-
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 10),
-                height: 60,
-                child: Stack(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        StreamBuilder<SequenceState?>(
-                          stream: _player.sequenceStateStream,
-                          builder: (context, snapshot) {
-                            final state = snapshot.data;
-                            if (state?.sequence.isEmpty ?? true) {
-                              return const SizedBox();
-                            }
-                            final metadata =
-                                state!.currentSource!.tag as AudioMetadata;
-                            return Row(
-                              children: [
-                                Container(
-                                  margin: const EdgeInsets.all(8.0),
-                                  width: 60,
-                                  height: 60,
-                                  child: metadata.artwork
-                                          .startsWith(RegExp(r'http|https'))
-                                      ? Image.network(metadata.artwork)
-                                      : Image.asset(metadata.artwork),
-                                ),
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildShowNameText(metadata.title),
-                                    StreamBuilder<PositionData>(
-                                      stream: _positionDataStream,
-                                      builder: (context, snapshot) {
-                                        final positionData = snapshot.data;
-
-                                        final textTime = handleTime(
-                                                positionData?.position) +
-                                            " / " +
-                                            handleTime(positionData?.duration);
-
-                                        return Text(textTime,
-                                            style: const TextStyle(
-                                                fontSize: 10,
-                                                color: Colors.black54));
-                                      },
-                                    )
-                                  ],
-                                )
-                              ],
-                            );
-                          },
-                        ),
-                        IconButton(
-                            key: _addGlobalKey,
-                            onPressed: () {
-                              RenderBox renderBox = _addGlobalKey.currentContext
-                                  ?.findRenderObject() as RenderBox;
-                              Rect box = renderBox.localToGlobal(Offset.zero) &
-                                  renderBox.size;
-                              box = box.translate(-60, -60);
-
-                              Popup.showPopupWindow(
-                                  context: context,
-                                  offset: box.topLeft,
-                                  child: (closeFunc) => Padding(
-                                        padding: const EdgeInsets.all(10),
-                                        child: Column(
-                                          children: [
-                                            TextButton(
-                                                onPressed: () async {
-                                                  await _openMusicFile();
-                                                },
-                                                child: const Text("添加音频")),
-                                            TextButton(
-                                                onPressed: () async {
-                                                  await _playlist.clear();
-                                                },
-                                                child: const Text("清除音频")),
-                                          ],
-                                        ),
-                                      ));
-                            },
-                            icon: const Icon(Icons.add)),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ControlButtons(player: _player),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            children: [_menuList(), _bottomToolView()],
           ),
         ),
       ),
@@ -232,7 +107,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   }
 
   ///列表
-  Widget menuList() {
+  Widget _menuList() {
     return Expanded(
       child: StreamBuilder<SequenceState?>(
         stream: _player.sequenceStateStream,
@@ -275,6 +150,139 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         },
       ),
     );
+  }
+
+  Widget _bottomToolView() {
+    return Container(
+      color: const Color(0xFFF5F2F0),
+      child: Stack(children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: SizedBox(
+            height: 80,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _musicInfoView(),
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: _settingsBtnView(),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Column(
+            children: [
+              ControlButtons(player: _player),
+              SizedBox(width: 400, child: _progressBarView())
+            ],
+          )
+        ])
+      ]),
+    );
+  }
+
+  /// 播放当前音频的信息
+  Widget _musicInfoView() {
+    return StreamBuilder<SequenceState?>(
+      stream: _player.sequenceStateStream,
+      builder: (context, snapshot) {
+        final state = snapshot.data;
+        if (state?.sequence.isEmpty ?? true) {
+          return const SizedBox();
+        }
+        final metadata = state!.currentSource!.tag as AudioMetadata;
+        return Row(
+          children: [
+            Container(
+              margin: const EdgeInsets.all(8.0),
+              width: 60,
+              height: 60,
+              child: Image.asset(metadata.artwork),
+            ),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildShowNameText(metadata.title),
+                StreamBuilder<PositionData>(
+                  stream: _positionDataStream,
+                  builder: (context, snapshot) {
+                    final positionData = snapshot.data;
+
+                    final textTime = handleTime(positionData?.position) +
+                        " / " +
+                        handleTime(positionData?.duration);
+
+                    return Text(textTime,
+                        style: const TextStyle(
+                            fontSize: 10, color: Colors.black54));
+                  },
+                )
+              ],
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  ///进度条
+  Widget _progressBarView() {
+    return StreamBuilder<PositionData>(
+      stream: _positionDataStream,
+      builder: (context, snapshot) {
+        final positionData = snapshot.data;
+        final position = positionData?.position ?? Duration.zero;
+        final duration = positionData?.duration ?? Duration.zero;
+        final bufferedPosition =
+            positionData?.bufferedPosition ?? Duration.zero;
+        return CapacityIndicator(
+          color: Colors.red,
+          bufferedColor: Colors.red.shade100,
+          initialValue: position.inMilliseconds.toDouble(),
+          max: duration.inMilliseconds.toDouble(),
+          bufferedValue: bufferedPosition.inMilliseconds.toDouble(),
+          onChanged: (v) {
+            _player.seek(Duration(milliseconds: v.round()));
+          },
+        );
+      },
+    );
+  }
+
+  Widget _settingsBtnView() {
+    return IconButton(
+        key: _addGlobalKey,
+        onPressed: () {
+          RenderBox renderBox =
+              _addGlobalKey.currentContext?.findRenderObject() as RenderBox;
+          Rect box = renderBox.localToGlobal(Offset.zero) & renderBox.size;
+          box = box.translate(-60, -60);
+          Popup.showPopupWindow(
+              context: context,
+              offset: box.topLeft,
+              child: (closeFunc) => Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      children: [
+                        TextButton(
+                            onPressed: () async {
+                              await _openMusicFile();
+                            },
+                            child: const Text("添加音频")),
+                        TextButton(
+                            onPressed: () async {
+                              await _playlist.clear();
+                            },
+                            child: const Text("清除音频")),
+                      ],
+                    ),
+                  ));
+        },
+        icon: const Icon(Icons.settings_rounded));
   }
 
   /// 获取本地音频
