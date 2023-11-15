@@ -114,6 +114,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         builder: (context, snapshot) {
           final state = snapshot.data;
           final sequence = state?.sequence ?? [];
+
           return ReorderableListView(
             onReorder: (int oldIndex, int newIndex) {
               if (oldIndex < newIndex) newIndex--;
@@ -137,11 +138,15 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   child: Material(
                     color:
                         i == state!.currentIndex ? Colors.grey.shade300 : null,
-                    child: ListTile(
-                      title: Text(sequence[i].tag.title as String),
-                      onTap: () {
-                        _player.seek(Duration.zero, index: i);
-                      },
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 24),
+                      child: ListTile(
+                        title: Text(sequence[i].tag.title as String),
+                        trailing: Text(handleTime(sequence[i].duration ?? const Duration(seconds: 0))),
+                        onTap: () {
+                          _player.seek(Duration.zero, index: i);
+                        },
+                      ),
                     ),
                   ),
                 ),
