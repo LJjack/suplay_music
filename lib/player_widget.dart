@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'audio_metadata.dart';
@@ -77,86 +76,96 @@ class _PlayerWidgetState extends State<PlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        SizedBox(
-          height: 20,
-          child: SliderTheme(
-            data: const SliderThemeData(
-              thumbShape: RoundSliderThumbShape( //  滑块形状，可以自定义
-                  enabledThumbRadius: 8  // 滑块大小
+    return SizedBox(
+      height: 80,
+      child: Stack(
+        children: [
+          Positioned(
+              left: 0,
+              child: Row(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 10),
+                    width: 60,
+                    height: 60,
+                    child: Image.asset("images/music.png"),
+                  ),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildShowNameText(widget.model?.title),
+                      Text(
+                          handleTime(_position) +
+                              " / " +
+                              handleTime(_duration),
+                          style: const TextStyle(
+                              fontSize: 10, color: Colors.black54))
+                    ],
+                  )
+                ],
+              )),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _btn(
+                    onPressed: widget.onPreviousPressed,
+                    icon: Icons.skip_previous,
+                  ),
+                  _btn(
+                    onPressed: _isPlaying ? _pause : _play,
+                    icon: _isPlaying ? Icons.pause : Icons.play_arrow,
+                  ),
+                  _btn(
+                    onPressed: widget.onNextPressed,
+                    icon: Icons.skip_next,
+                  ),
+                ],
               ),
-              overlayShape: RoundSliderOverlayShape(  // 滑块外圈形状，可以自定义
-                overlayRadius: 15, // 滑块外圈大小
+              _progressBarView(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _progressBarView() {
+    return SizedBox(
+      height: 20,
+      width: 400,
+      child: SliderTheme(
+        data: const SliderThemeData(
+          thumbShape: RoundSliderThumbShape(
+              //  滑块形状，可以自定义
+              enabledThumbRadius: 8 // 滑块大小
               ),
-            ),
-            child: Slider(
-              onChanged: (v) {
-                final duration = _duration;
-                if (duration == null) {
-                  return;
-                }
-                final position = v * duration.inMilliseconds;
-                player.seek(Duration(milliseconds: position.round()));
-              },
-              value: (_position != null &&
-                      _duration != null &&
-                      _position!.inMilliseconds > 0 &&
-                      _position!.inMilliseconds < _duration!.inMilliseconds)
-                  ? _position!.inMilliseconds / _duration!.inMilliseconds
-                  : 0.0,
-            ),
+          overlayShape: RoundSliderOverlayShape(
+            // 滑块外圈形状，可以自定义
+            overlayRadius: 15, // 滑块外圈大小
           ),
         ),
-        Stack(
-          children: [
-            Positioned(
-                left: 0,
-                child: Row(
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 0, horizontal: 8),
-                      width: 40,
-                      height: 40,
-                      child: Image.asset("images/music.png"),
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildShowNameText(widget.model?.title),
-                        Text(
-                            handleTime(_position) +
-                                " / " +
-                                handleTime(_duration),
-                            style: const TextStyle(
-                                fontSize: 10, color: Colors.black54))
-                      ],
-                    )
-                  ],
-                )),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _btn(
-                  onPressed: widget.onPreviousPressed,
-                  icon: Icons.skip_previous,
-                ),
-                _btn(
-                  onPressed: _isPlaying ? _pause : _play,
-                  icon: _isPlaying ? Icons.pause : Icons.play_arrow,
-                ),
-                _btn(
-                  onPressed: widget.onNextPressed,
-                  icon: Icons.skip_next,
-                ),
-              ],
-            ),
-          ],
+        child: Slider(
+          onChanged: (v) {
+            final duration = _duration;
+            if (duration == null) {
+              return;
+            }
+            final position = v * duration.inMilliseconds;
+            player.seek(Duration(milliseconds: position.round()));
+          },
+          value: (_position != null &&
+                  _duration != null &&
+                  _position!.inMilliseconds > 0 &&
+                  _position!.inMilliseconds < _duration!.inMilliseconds)
+              ? _position!.inMilliseconds / _duration!.inMilliseconds
+              : 0.0,
         ),
-      ],
+      ),
     );
   }
 

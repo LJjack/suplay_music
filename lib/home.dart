@@ -4,16 +4,13 @@
 /// @Date 2022/4/24 16:24
 ///
 /// @Description 音乐主页
-import 'dart:convert';
-
+///
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:suplay_music/drop_down_menu.dart';
 import 'package:suplay_music/player_widget.dart';
-
 import 'audio_metadata.dart';
-
 import 'package:audioplayers/audioplayers.dart';
 
 class Home extends StatefulWidget {
@@ -26,14 +23,12 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> with WidgetsBindingObserver {
   List<AudioMetadata> playerModels = [];
   int currentPlayerIdx = 0;
-
   late AudioPlayer player;
 
   AudioMetadata? get currentPlayerModel {
     if (currentPlayerIdx >= playerModels.length) {
       return null;
     }
-
     return playerModels[currentPlayerIdx];
   }
 
@@ -72,41 +67,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               menuList(),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 10),
-                height: 70,
-                child: Stack(
-                  children: [
-                    PlayerWidget(
-                      player: player,
-                      model: currentPlayerModel,
-                      onPreviousPressed: () async {
-                        int newIndex = currentPlayerIdx;
-                        newIndex--;
-                        newIndex %= playerModels.length;
-                        await playMusic(index: newIndex);
-                        setState(() {});
-                      },
-                      onNextPressed: () async {
-                        int newIndex = currentPlayerIdx;
-                        newIndex++;
-                        newIndex %= playerModels.length;
-                        await playMusic(index: newIndex);
-                        setState(() {});
-                      },
-                    ),
-                    Positioned(
-                        top: 15,
-                        right: 0,
-                        child: IconButton(
-                            key: _addGlobalKey,
-                            onPressed: () {
-                              Navigator.push(context, addAlertMenu());
-                            },
-                            icon: const Icon(Icons.add))),
-                  ],
-                ),
-              ),
+              _toolView(),
             ],
           ),
         ),
@@ -117,7 +78,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   //添加弹出框，添加和清除音频
   DropDownMenuRouter addAlertMenu() {
     RenderBox renderBox =
-    _addGlobalKey.currentContext?.findRenderObject() as RenderBox;
+        _addGlobalKey.currentContext?.findRenderObject() as RenderBox;
     Rect box = renderBox.localToGlobal(Offset.zero) & renderBox.size;
     box = box.translate(-50, 0);
     return DropDownMenuRouter(
@@ -163,7 +124,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               ),
               onDismissed: (dismissDirection) async {
                 playerModels.removeAt(index);
-
               },
               child: Material(
                 color: index == currentPlayerIdx ? Colors.grey.shade300 : null,
@@ -185,6 +145,45 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     );
   }
 
+  ///工具栏
+  Widget _toolView() {
+    return Container(
+      color: const Color(0xFFF5F2F0),
+      height: 80,
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          PlayerWidget(
+            player: player,
+            model: currentPlayerModel,
+            onPreviousPressed: () async {
+              int newIndex = currentPlayerIdx;
+              newIndex--;
+              newIndex %= playerModels.length;
+              await playMusic(index: newIndex);
+              setState(() {});
+            },
+            onNextPressed: () async {
+              int newIndex = currentPlayerIdx;
+              newIndex++;
+              newIndex %= playerModels.length;
+              await playMusic(index: newIndex);
+              setState(() {});
+            },
+          ),
+          Positioned(
+              right: 0,
+              child: IconButton(
+                  key: _addGlobalKey,
+                  onPressed: () {
+                    Navigator.push(context, addAlertMenu());
+                  },
+                  icon:
+                      const Icon(Icons.settings_rounded, color: Colors.cyan))),
+        ],
+      ),
+    );
+  }
 
   /// 添加本地音频
   Future<void> _openMusicFile() async {
@@ -207,7 +206,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     for (var f in files) {
       final name = f.name.replaceAll(RegExp(r'.mp3|.MP3|m4a|M4A'), '');
       final m =
-      AudioMetadata(title: name, artwork: 'images/music.png', path: f.path);
+          AudioMetadata(title: name, artwork: 'images/music.png', path: f.path);
 
       playerModels.add(m);
       saveFlies.add(m.toJsonString());
