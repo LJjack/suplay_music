@@ -7,24 +7,34 @@
 import 'dart:convert' show jsonEncode;
 
 class AudioMetadata {
+  ///名称
   final String title;
+
+  ///封面 base64
   final String artwork;
+
+  ///作者
   final String artist;
+
+  ///歌词
+  final String lyrics;
   final String path;
 
   AudioMetadata({
     required this.title,
-    required this.artist,
-    required this.artwork,
+    this.artist = '',
+    this.artwork = '',
+    this.lyrics = '',
     required this.path,
   });
 
   factory AudioMetadata.fromJson(Map<String, dynamic> json) {
     return AudioMetadata(
-      title: json['title'] as String,
-      artist: json['artist'] as String,
-      artwork: json['artwork'] as String,
-      path: json['path'] as String,
+      title: json['title'],
+      artist: json['artist'],
+      artwork: json['artwork'] ?? '',
+      lyrics: json['lyrics'] ?? '',
+      path: json['path'] ?? '',
     );
   }
 
@@ -32,6 +42,7 @@ class AudioMetadata {
         'title': title,
         'artist': artist,
         'artwork': artwork,
+        'lyrics': lyrics,
         'path': path,
       };
 

@@ -6,6 +6,7 @@
 /// @Description 音乐主页
 
 import 'dart:convert';
+import 'dart:ffi';
 import 'package:audio_session/audio_session.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
@@ -96,7 +97,12 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [_headView(), _menuList(), _bottomToolView()],
+            children: [
+              _headView(),
+              const Divider(),
+              _menuList(),
+              _bottomToolView()
+            ],
           ),
         ),
       ),
@@ -116,13 +122,19 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                     style:
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
             const Expanded(
-                child: Text("标题",
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
-            const Expanded(
-                child: Text("作者",
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("标题",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  Text("作者",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  SizedBox(width: 100),
+                ],
+              ),
+            ),
           ],
         ));
   }
@@ -135,7 +147,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         builder: (context, snapshot) {
           final state = snapshot.data;
           final sequence = state?.sequence ?? [];
-
           return ReorderableListView(
             onReorder: (int oldIndex, int newIndex) {
               if (oldIndex < newIndex) newIndex--;
@@ -159,29 +170,40 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   child: Material(
                     color:
                         i == state!.currentIndex ? Colors.grey.shade300 : null,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 24),
-                      child: ListTile(
-                        leading: SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: sequence[i].tag.artwork.isNotEmpty
-                                ? Image.memory(
-                                    base64.decode(sequence[i].tag.artwork),
-                                  )
-                                : Image.asset('images/music.png')),
-                        title: Text(sequence[i].tag.title as String),
-                        trailing: Text(handleTime(sequence[i].duration ??
-                            const Duration(seconds: 0))),
-                        onTap: () {
-                          _player.seek(Duration.zero, index: i);
-                        },
-                      ),
-                    ),
+                    child: _menuCell(tag: sequence[i].tag, index: i),
                   ),
                 ),
             ],
           );
+        },
+      ),
+    );
+  }
+
+  Widget _menuCell({required AudioMetadata tag, required int index}) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 24),
+      child: ListTile(
+        leading: SizedBox(
+            width: 36,
+            height: 36,
+            child: tag.artwork.isNotEmpty
+                ? Image.memory(
+                    base64.decode(tag.artwork),
+                  )
+                : Image.asset('images/music.png')),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(tag.title),
+            Text(tag.artist),
+            const SizedBox(width: 100)
+          ],
+        ),
+        // trailing: Text(handleTime(sequence[i].duration ??
+        //     const Duration(seconds: 0))),
+        onTap: () {
+          _player.seek(Duration.zero, index: index);
         },
       ),
     );
@@ -351,13 +373,15 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         if (name == null || name == "") {
           name = f.name.replaceAll(RegExp(r'.mp3|.MP3|m4a|M4A'), '');
         }
-        final artist = tag["artist"];
-
+        final artist = tag["Artist"];
+        print(artist);
+        final lyrics = tag["USLT"]?["lyrics"];
         final artwork = tag["APIC"]?["base64"];
         final m = AudioMetadata(
             title: name,
             artwork: artwork ?? "",
             artist: artist ?? "",
+            lyrics: lyrics ?? '',
             path: f.path);
         await _playlist.add(AudioSource.uri(Uri.file(f.path), tag: m));
         saveFlies.add(m.toJsonString());
