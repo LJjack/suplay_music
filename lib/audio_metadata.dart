@@ -9,10 +9,12 @@ import 'dart:convert' show jsonEncode;
 class AudioMetadata {
   final String title;
   final String artwork;
+  final String artist;
   final String path;
 
   AudioMetadata({
     required this.title,
+    required this.artist,
     required this.artwork,
     required this.path,
   });
@@ -20,20 +22,21 @@ class AudioMetadata {
   factory AudioMetadata.fromJson(Map<String, dynamic> json) {
     return AudioMetadata(
       title: json['title'] as String,
+      artist: json['artist'] as String,
       artwork: json['artwork'] as String,
       path: json['path'] as String,
     );
   }
 
-
   Map<String, dynamic> toJson() => <String, dynamic>{
         'title': title,
+        'artist': artist,
         'artwork': artwork,
         'path': path,
       };
 
   String toJsonString() {
-    return jsonEncode( toJson());
+    return jsonEncode(toJson());
   }
 }
 

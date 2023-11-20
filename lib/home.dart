@@ -5,6 +5,7 @@
 ///
 /// @Description 音乐主页
 
+import 'dart:convert';
 import 'package:audio_session/audio_session.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
@@ -18,6 +19,7 @@ import 'widgets/popup.dart';
 import 'audio_metadata.dart';
 import 'widgets/control_buttons.dart';
 import 'widgets/marquee.dart';
+import 'package:id3/id3.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -46,7 +48,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   Future<void> _init() async {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.speech());
-    // Listen to errors during playback.
     _player.playbackEventStream.listen((event) {},
         onError: (Object e, StackTrace stackTrace) {
       if (kDebugMode) {
@@ -61,10 +62,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       }
     }
 
-    await getSaveMusic();
-  }
-
-  Future<void> getSaveMusic() async {
     await _playlist.clear();
   }
 
@@ -99,11 +96,35 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [_menuList(), _bottomToolView()],
+            children: [_headView(), _menuList(), _bottomToolView()],
           ),
         ),
       ),
     );
+  }
+
+  Widget _headView() {
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        height: 30,
+        child: Row(
+          children: [
+            Container(
+                margin: const EdgeInsets.only(left: 8, right: 8),
+                width: 40,
+                child: const Text("图片",
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
+            const Expanded(
+                child: Text("标题",
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
+            const Expanded(
+                child: Text("作者",
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
+          ],
+        ));
   }
 
   ///列表
@@ -141,8 +162,17 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                     child: Padding(
                       padding: const EdgeInsets.only(right: 24),
                       child: ListTile(
+                        leading: SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: sequence[i].tag.artwork.isNotEmpty
+                                ? Image.memory(
+                                    base64.decode(sequence[i].tag.artwork),
+                                  )
+                                : Image.asset('images/music.png')),
                         title: Text(sequence[i].tag.title as String),
-                        trailing: Text(handleTime(sequence[i].duration ?? const Duration(seconds: 0))),
+                        trailing: Text(handleTime(sequence[i].duration ??
+                            const Duration(seconds: 0))),
                         onTap: () {
                           _player.seek(Duration.zero, index: i);
                         },
@@ -199,14 +229,18 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
           return const SizedBox();
         }
         final metadata = state!.currentSource!.tag as AudioMetadata;
+
         return Row(
           children: [
-            Container(
-              margin: const EdgeInsets.all(8.0),
-              width: 60,
-              height: 60,
-              child: Image.asset(metadata.artwork),
-            ),
+            SizedBox(
+                width: 60,
+                height: 60,
+                child: metadata.artwork.isNotEmpty
+                    ? Image.memory(
+                        base64.decode(metadata.artwork),
+                      )
+                    : Image.asset('images/music.png')),
+            const SizedBox(width: 6),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,11 +343,25 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     List<String> saveFlies = [];
 
     for (var f in files) {
-      final name = f.name.replaceAll(RegExp(r'.mp3|.MP3|m4a|M4A'), '');
-      final m =
-          AudioMetadata(title: name, artwork: 'images/music.png', path: f.path);
-      await _playlist.add(AudioSource.uri(Uri.file(f.path), tag: m));
-      saveFlies.add(m.toJsonString());
+      List<int> mp3Bytes = await f.readAsBytes();
+      MP3Instance mp3instance = MP3Instance(mp3Bytes);
+      if (mp3instance.parseTagsSync()) {
+        final tag = mp3instance.getMetaTags()!;
+        var name = tag["Title"];
+        if (name == null || name == "") {
+          name = f.name.replaceAll(RegExp(r'.mp3|.MP3|m4a|M4A'), '');
+        }
+        final artist = tag["artist"];
+
+        final artwork = tag["APIC"]?["base64"];
+        final m = AudioMetadata(
+            title: name,
+            artwork: artwork ?? "",
+            artist: artist ?? "",
+            path: f.path);
+        await _playlist.add(AudioSource.uri(Uri.file(f.path), tag: m));
+        saveFlies.add(m.toJsonString());
+      }
     }
     await _player.load();
   }
