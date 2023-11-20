@@ -122,17 +122,22 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                     style:
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
             const Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("标题",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  Text("作者",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  SizedBox(width: 100),
-                ],
+              child: Padding(
+                padding: EdgeInsets.only(right: 30),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text("标题",
+                          style:
+                              TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    ),
+                    Expanded(
+                      child: Text("演唱者",
+                          style:
+                              TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -193,11 +198,9 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   )
                 : Image.asset('images/music.png')),
         title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(tag.title),
-            Text(tag.artist),
-            const SizedBox(width: 100)
+            Expanded(child: Text(tag.title)),
+            Expanded(child: Text(tag.artist)),
           ],
         ),
         // trailing: Text(handleTime(sequence[i].duration ??
@@ -268,6 +271,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildShowNameText(metadata.title),
+                Text(metadata.artist, style: const TextStyle(
+                    fontSize: 12, color: Colors.black87)),
                 StreamBuilder<PositionData>(
                   stream: _positionDataStream,
                   builder: (context, snapshot) {
@@ -410,6 +415,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
           ),
           blankSpace: 20.0,
           startPadding: 10.0,
+          velocity: 40,
         ));
   }
 }
