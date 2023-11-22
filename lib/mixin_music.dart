@@ -117,7 +117,7 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
                     style:
                         const TextStyle(fontSize: 12, color: Colors.black87)),
                 StreamBuilder<PositionData>(
-                  stream: _positionDataStream,
+                  stream: positionDataStream,
                   builder: (context, snapshot) {
                     final positionData = snapshot.data;
 
@@ -141,7 +141,7 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
   ///进度条
   Widget _progressBarView() {
     return StreamBuilder<PositionData>(
-      stream: _positionDataStream,
+      stream: positionDataStream,
       builder: (context, snapshot) {
         final positionData = snapshot.data;
         final position = positionData?.position ?? Duration.zero;
@@ -162,7 +162,7 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
     );
   }
 
-  Stream<PositionData> get _positionDataStream =>
+  Stream<PositionData> get positionDataStream =>
       Rx.combineLatest3<Duration, Duration, Duration?, PositionData>(
           _player.positionStream,
           _player.bufferedPositionStream,
@@ -198,7 +198,6 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
           name = f.name.replaceAll(RegExp(r'.mp3|.MP3|m4a|M4A'), '');
         }
         final artist = tag["Artist"];
-        print(artist);
         final lyrics = tag["USLT"]?["lyrics"];
         final artwork = tag["APIC"]?["base64"];
         final m = AudioMetadata(

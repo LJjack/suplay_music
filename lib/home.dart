@@ -22,13 +22,12 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> with WidgetsBindingObserver, MusicMixin {
+class _HomeState extends State<Home> with MusicMixin {
   late AudioPlayer _player;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _player = AudioPlayer();
     setupInit(player: _player);
     _init();
@@ -56,16 +55,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, MusicMixin {
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _player.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _player.stop();
-    }
   }
 
   @override
@@ -79,7 +70,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, MusicMixin {
             _headView(),
             const Divider(),
             _menuList(),
-            bottomToolView(onTap: (){
+            bottomToolView(onTap: () {
               _showCustomModalBottomSheet();
             })
           ],
@@ -182,8 +173,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, MusicMixin {
             Expanded(child: Text(tag.artist)),
           ],
         ),
-        // trailing: Text(handleTime(sequence[i].duration ??
-        //     const Duration(seconds: 0))),
         onTap: () {
           _player.seek(Duration.zero, index: index);
         },
@@ -192,13 +181,11 @@ class _HomeState extends State<Home> with WidgetsBindingObserver, MusicMixin {
   }
 
   _showCustomModalBottomSheet() async {
-    return showModalBottomSheet(
-      isScrollControlled: true,
-      context: context,
-      constraints: BoxConstraints.tight(MediaQuery.of(context).size),
-      builder: (context) {
-        return  Detail(player: _player);
-      },
-    );
+    Navigator.of(context).push(ModalBottomSheetRoute(
+        constraints: BoxConstraints.tight(MediaQuery.of(context).size),
+        builder: (context) {
+          return Detail(player: _player);
+        },
+        isScrollControlled: true, enableDrag: false));
   }
 }
