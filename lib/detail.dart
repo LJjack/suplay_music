@@ -23,7 +23,6 @@ class Detail extends StatefulWidget {
 }
 
 class _DetailState extends State<Detail> with MusicMixin {
-  late AudioMetadata _metadata;
 
   AudioPlayer get _player => widget.player;
   ScrollController? controller;
@@ -37,22 +36,7 @@ class _DetailState extends State<Detail> with MusicMixin {
   void initState() {
     super.initState();
     setupInit(player: _player);
-    _metadata = _player.sequence![_player.currentIndex!].tag;
-    timeList.clear();
-    lyricsList.clear();
-    for (final text in _metadata.lyrics.split('\n')) {
-      RegExp regex = RegExp(r'\[\s*(.*)\]\s*(.*)');
-      var match = regex.firstMatch(text);
-      if (match == null) {
-        continue;
-      }
-      String time = match.group(1) ?? "";
-      String lyrics = match.group(2) ?? "";
 
-      timeList.add(parseDuration(time));
-
-      lyricsList.add(lyrics);
-    }
 
     controller = ScrollController();
     lyricsStream = positionDataStream.listen((event) {
@@ -102,30 +86,55 @@ class _DetailState extends State<Detail> with MusicMixin {
         child: Column(
           children: [
             Expanded(
-                child: Container(
-              color: Colors.white,
-              child: Stack(
-                // mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Container(color: Colors.red, width: 20, height: 20),
-                  Positioned.fill(
-                    child: ListWheelScrollView.useDelegate(
-                        controller: controller,
-                        itemExtent: 40,
-                        childDelegate: ListWheelChildBuilderDelegate(
-                            builder: (cxt, index) {
-                              return Text(
-                                lyricsList[index],
-                                style: const TextStyle(
-                                    color: Colors.black, fontSize: 18),
-                              );
-                            },
-                            childCount: lyricsList.length)),
-                  ),
-                  const Center(child: Divider(color: Colors.red,thickness: 2.0,indent: 260,endIndent: 260,))
-                ],
-              ),
-            )),
+                child: StreamBuilder<SequenceState?>(
+                    stream: _player.sequenceStateStream,
+                  builder: (context, snapshot) {
+                    final state = snapshot.data;
+                    if (state?.sequence.isEmpty ?? true) {
+                      return const SizedBox();
+                    }
+                    final metadata = state!.currentSource!.tag as AudioMetadata;
+                    timeList.clear();
+                    lyricsList.clear();
+                    for (final text in metadata.lyrics.split('\n')) {
+                      RegExp regex = RegExp(r'\[\s*(.*)\]\s*(.*)');
+                      var match = regex.firstMatch(text);
+                      if (match == null) {
+                        continue;
+                      }
+                      String time = match.group(1) ?? "";
+                      String lyrics = match.group(2) ?? "";
+
+                      timeList.add(parseDuration(time));
+
+                      lyricsList.add(lyrics);
+                    }
+                    if(lyricsList.isEmpty) {
+                      return const Center(child: Text("无歌词显示"));
+                    }
+
+
+                    return Stack(
+                      children: [
+                        Positioned.fill(
+                          child: ListWheelScrollView.useDelegate(
+                              controller: controller,
+                              itemExtent: 40,
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                  builder: (cxt, index) {
+                                    return Text(
+                                      lyricsList[index],
+                                      style: const TextStyle(
+                                          color: Colors.black, fontSize: 18),
+                                    );
+                                  },
+                                  childCount: lyricsList.length)),
+                        ),
+                        const Center(child: Divider(color: Colors.red,thickness: 2.0,indent: 260,endIndent: 260,))
+                      ],
+                    );
+                  }
+                )),
             bottomToolView(
                 onTap: () {
                   Navigator.of(context).pop();

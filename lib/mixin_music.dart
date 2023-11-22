@@ -65,6 +65,7 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
     return StreamBuilder<SequenceState?>(
       stream: _player.sequenceStateStream,
       builder: (context, snapshot) {
+        print("-----------");
         final state = snapshot.data;
         if (state?.sequence.isEmpty ?? true) {
           return const SizedBox();
