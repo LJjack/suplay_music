@@ -181,10 +181,7 @@ class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin, MusicMi
   }
 
   _showCustomModalBottomSheet() async {
-    Navigator.of(context).push(MaterialPageRoute(builder: (cxt){
-      return Detail(player: _player);
-    }));
-    return;
+
     Navigator.of(context).push(ModalBottomSheetRoute(
         constraints: BoxConstraints.tight(MediaQuery.of(context).size),
         builder: (context) {

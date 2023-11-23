@@ -25,7 +25,7 @@ class Detail extends StatefulWidget {
 class _DetailState extends State<Detail> with MusicMixin {
 
   AudioPlayer get _player => widget.player;
-  ScrollController? controller;
+  FixedExtentScrollController? controller;
   List<Duration> timeList = [];
   List<String> lyricsList = [];
   StreamSubscription? lyricsStream;
@@ -36,7 +36,7 @@ class _DetailState extends State<Detail> with MusicMixin {
   void initState() {
     super.initState();
 
-    controller = ScrollController();
+    controller = FixedExtentScrollController();
     lyricsStream = positionDataStream.listen((event) {
       if (lyricsList.isEmpty)  return;
       int index =  timeList.indexWhere((element) => event.position<element) - 1;
@@ -44,8 +44,8 @@ class _DetailState extends State<Detail> with MusicMixin {
       if (currentIndex == index) return;
 
       if (index < lyricsList.length) {
-        controller?.animateTo(
-          index * 40.0 ,  // 滚动位置
+        controller?.animateToItem(
+          index,  // 滚动位置
           duration: const Duration(milliseconds: 200),  // 滚动动画的持续时间
           curve: Curves.ease,  // 滚动动画的曲线
         );
@@ -115,7 +115,6 @@ class _DetailState extends State<Detail> with MusicMixin {
                     if(lyricsList.isEmpty) {
                       return const Center(child: Text("无歌词显示"));
                     }
-
 
                     return Stack(
                       children: [
