@@ -22,16 +22,16 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> with MusicMixin {
+class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin, MusicMixin {
   late AudioPlayer _player;
 
   @override
   void initState() {
     super.initState();
     _player = AudioPlayer();
-    setupInit(player: _player);
     _init();
   }
+
 
   Future<void> _init() async {
     final session = await AudioSession.instance;
@@ -61,6 +61,8 @@ class _HomeState extends State<Home> with MusicMixin {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+    print("--===--build--====---");
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -116,17 +118,15 @@ class _HomeState extends State<Home> with MusicMixin {
 
   ///列表
   Widget _menuList() {
+
     return Expanded(
       child: StreamBuilder<SequenceState?>(
         stream: _player.sequenceStateStream,
         builder: (context, snapshot) {
           final state = snapshot.data;
           final sequence = state?.sequence ?? [];
-          return ReorderableListView(
-            onReorder: (int oldIndex, int newIndex) {
-              if (oldIndex < newIndex) newIndex--;
-              playList.move(oldIndex, newIndex);
-            },
+          print("--===--StreamBuilder--====---");
+          return ListView(
             children: [
               for (var i = 0; i < sequence.length; i++)
                 Dismissible(
@@ -181,6 +181,10 @@ class _HomeState extends State<Home> with MusicMixin {
   }
 
   _showCustomModalBottomSheet() async {
+    Navigator.of(context).push(MaterialPageRoute(builder: (cxt){
+      return Detail(player: _player);
+    }));
+    return;
     Navigator.of(context).push(ModalBottomSheetRoute(
         constraints: BoxConstraints.tight(MediaQuery.of(context).size),
         builder: (context) {
@@ -188,4 +192,11 @@ class _HomeState extends State<Home> with MusicMixin {
         },
         isScrollControlled: true, enableDrag: false));
   }
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  AudioPlayer get player => _player;
+
 }

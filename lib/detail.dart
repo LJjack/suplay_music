@@ -35,8 +35,6 @@ class _DetailState extends State<Detail> with MusicMixin {
   @override
   void initState() {
     super.initState();
-    setupInit(player: _player);
-
 
     controller = ScrollController();
     lyricsStream = positionDataStream.listen((event) {
@@ -57,7 +55,10 @@ class _DetailState extends State<Detail> with MusicMixin {
     });
   }
 
-  Duration parseDuration(String s) {
+  Duration? parseDuration(String s) {
+    if (!s.contains('.') || !s.contains(":")) {
+      return null;
+    }
     int hours = 0;
     int minutes = 0;
     int micros;
@@ -104,10 +105,12 @@ class _DetailState extends State<Detail> with MusicMixin {
                       }
                       String time = match.group(1) ?? "";
                       String lyrics = match.group(2) ?? "";
+                      final timeD = parseDuration(time);
+                      if (timeD != null) {
+                        timeList.add(timeD);
+                        lyricsList.add(lyrics);
+                      }
 
-                      timeList.add(parseDuration(time));
-
-                      lyricsList.add(lyrics);
                     }
                     if(lyricsList.isEmpty) {
                       return const Center(child: Text("无歌词显示"));
@@ -145,4 +148,7 @@ class _DetailState extends State<Detail> with MusicMixin {
       ),
     );
   }
+
+  @override
+  AudioPlayer get player => _player;
 }

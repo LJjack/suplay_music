@@ -9,22 +9,21 @@ import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:suplay_music/widgets/artwork_small.dart';
 import 'widgets/capacity_indicators.dart';
 import 'widgets/popup.dart';
-import 'dart:convert' show base64;
+
 import 'audio_metadata.dart';
 import 'widgets/control_buttons.dart';
 import 'widgets/marquee.dart';
 import 'package:id3/id3.dart';
 
 mixin MusicMixin<T extends StatefulWidget> on State<T> {
-  late AudioPlayer _player;
   final playList = ConcatenatingAudioSource(children: []);
   final _addGlobalKey = GlobalKey();
 
-  setupInit({required AudioPlayer player}) {
-    _player = player;
-  }
+  @protected
+  AudioPlayer get player;
 
   Widget bottomToolView({GestureTapCallback? onTap, bool down = false}) {
     return Container(
@@ -49,7 +48,7 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Column(
             children: [
-              ControlButtons(player: _player),
+              ControlButtons(player: player),
               SizedBox(width: 400, child: _progressBarView())
             ],
           )
@@ -58,14 +57,11 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
     );
   }
 
-  bool _showplayBar = false;
-
   /// 播放当前音频的信息
   Widget _musicInfoView({GestureTapCallback? onTap, bool down = false}) {
     return StreamBuilder<SequenceState?>(
-      stream: _player.sequenceStateStream,
+      stream: player.sequenceStateStream,
       builder: (context, snapshot) {
-        print("-----------");
         final state = snapshot.data;
         if (state?.sequence.isEmpty ?? true) {
           return const SizedBox();
@@ -74,40 +70,7 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
 
         return Row(
           children: [
-            MouseRegion(
-              onEnter: (event) {
-                setState(() {
-                  _showplayBar = true;
-                });
-              },
-              onExit: (event) {
-                setState(() {
-                  _showplayBar = false;
-                });
-              },
-              child: Stack(
-                children: [
-                  SizedBox(
-                      width: 60,
-                      height: 60,
-                      child: metadata.artwork.isNotEmpty
-                          ? Image.memory(
-                              base64.decode(metadata.artwork),
-                            )
-                          : Image.asset('images/music.png')),
-                  if (_showplayBar)
-                    InkWell(
-                      child: Opacity(
-                          opacity: 0.7,
-                          child: Image.asset(
-                              'images/playBar'+ (down?'Close':'Open')+'SingleSong.png',
-                              width: 60,
-                              height: 60)),
-                      onTap: onTap,
-                    ),
-                ],
-              ),
-            ),
+            ArtworkSmall(artwork: metadata.artwork, down: down, onTap: onTap),
             const SizedBox(width: 6),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -156,7 +119,7 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
           max: duration.inMilliseconds.toDouble(),
           bufferedValue: bufferedPosition.inMilliseconds.toDouble(),
           onChanged: (v) {
-            _player.seek(Duration(milliseconds: v.round()));
+            player.seek(Duration(milliseconds: v.round()));
           },
         );
       },
@@ -165,9 +128,9 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
 
   Stream<PositionData> get positionDataStream =>
       Rx.combineLatest3<Duration, Duration, Duration?, PositionData>(
-          _player.positionStream,
-          _player.bufferedPositionStream,
-          _player.durationStream,
+          player.positionStream,
+          player.bufferedPositionStream,
+          player.durationStream,
           (position, bufferedPosition, duration) => PositionData(
               position, bufferedPosition, duration ?? Duration.zero));
 
@@ -211,7 +174,7 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
         // saveFlies.add(m.toJsonString());
       }
     }
-    await _player.load();
+    await player.load();
   }
 
   Widget _settingsBtnView() {
