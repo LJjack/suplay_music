@@ -165,4 +165,9 @@ class Popup {
 
   }
 
+  static dismissPopupWindow() {
+    entry?.remove();
+    entry = null;
+  }
+
 }

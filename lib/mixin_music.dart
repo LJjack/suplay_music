@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:suplay_music/widgets/artwork_small.dart';
@@ -141,17 +142,11 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
       extensions: <String>['mp3', 'MP3'],
     );
 
-    const XTypeGroup m4aTypeGroup = XTypeGroup(
-      label: 'm4a',
-      extensions: <String>['m4a', 'M4A'],
-    );
-
     final List<XFile> files = await openFiles(
-        acceptedTypeGroups: <XTypeGroup>[mp3TypeGroup, m4aTypeGroup]);
+        acceptedTypeGroups: <XTypeGroup>[mp3TypeGroup]);
     if (files.isEmpty) return;
-
-    // List<String> saveFlies = [];
-
+    EasyLoading.show();
+    List<AudioSource> sourceList = [];
     for (var f in files) {
       List<int> mp3Bytes = await f.readAsBytes();
       MP3Instance mp3instance = MP3Instance(mp3Bytes);
@@ -159,7 +154,7 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
         final tag = mp3instance.getMetaTags()!;
         var name = tag["Title"];
         if (name == null || name == "") {
-          name = f.name.replaceAll(RegExp(r'.mp3|.MP3|m4a|M4A'), '');
+          name = f.name.replaceAll(RegExp(r'.mp3|.MP3'), '');
         }
         final artist = tag["Artist"];
         final lyrics = tag["USLT"]?["lyrics"];
@@ -170,11 +165,13 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
             artist: artist ?? "未知",
             lyrics: lyrics ?? '',
             path: f.path);
-        await playList.add(AudioSource.uri(Uri.file(f.path), tag: m));
-        // saveFlies.add(m.toJsonString());
+        sourceList.add(AudioSource.uri(Uri.file(f.path), tag: m));
       }
     }
+
+    await playList.addAll(sourceList);
     await player.load();
+    EasyLoading.dismiss();
   }
 
   Widget _settingsBtnView() {
@@ -194,11 +191,13 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
                       children: [
                         TextButton(
                             onPressed: () async {
+                              Popup.dismissPopupWindow();
                               await _openMusicFile();
                             },
                             child: const Text("添加音频")),
                         TextButton(
                             onPressed: () async {
+                              Popup.dismissPopupWindow();
                               await playList.clear();
                             },
                             child: const Text("清除音频")),
