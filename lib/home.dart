@@ -62,7 +62,6 @@ class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin, MusicMi
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    print("--===--build--====---");
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -125,7 +124,6 @@ class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin, MusicMi
         builder: (context, snapshot) {
           final state = snapshot.data;
           final sequence = state?.sequence ?? [];
-          print("--===--StreamBuilder--====---");
           return ListView(
             children: [
               for (var i = 0; i < sequence.length; i++)

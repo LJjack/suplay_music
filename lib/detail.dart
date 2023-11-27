@@ -23,7 +23,6 @@ class Detail extends StatefulWidget {
 }
 
 class _DetailState extends State<Detail> with MusicMixin {
-
   AudioPlayer get _player => widget.player;
   FixedExtentScrollController? controller;
   List<Duration> timeList = [];
@@ -31,27 +30,29 @@ class _DetailState extends State<Detail> with MusicMixin {
   StreamSubscription? lyricsStream;
 
   int currentIndex = -1;
+  late StreamController<int> lyricsController;
 
   @override
   void initState() {
     super.initState();
-
+    lyricsController = StreamController<int>();
     controller = FixedExtentScrollController();
+
     lyricsStream = positionDataStream.listen((event) {
-      if (lyricsList.isEmpty)  return;
-      int index =  timeList.indexWhere((element) => event.position<element) - 1;
+      if (lyricsList.isEmpty) return;
+      int index =
+          timeList.indexWhere((element) => event.position < element) - 1;
       if (index <= 0) index = 0;
       if (currentIndex == index) return;
-
       if (index < lyricsList.length) {
+        currentIndex = index;
+        lyricsController.add(index);
         controller?.animateToItem(
-          index,  // 滚动位置
-          duration: const Duration(milliseconds: 200),  // 滚动动画的持续时间
-          curve: Curves.ease,  // 滚动动画的曲线
+          index, // 滚动位置
+          duration: const Duration(milliseconds: 200), // 滚动动画的持续时间
+          curve: Curves.ease, // 滚动动画的曲线
         );
-
       }
-
     });
   }
 
@@ -77,6 +78,7 @@ class _DetailState extends State<Detail> with MusicMixin {
   void dispose() {
     controller?.dispose();
     lyricsStream?.cancel();
+    lyricsController.close();
     super.dispose();
   }
 
@@ -89,54 +91,55 @@ class _DetailState extends State<Detail> with MusicMixin {
             Expanded(
                 child: StreamBuilder<SequenceState?>(
                     stream: _player.sequenceStateStream,
-                  builder: (context, snapshot) {
-                    final state = snapshot.data;
-                    if (state?.sequence.isEmpty ?? true) {
-                      return const SizedBox();
-                    }
-                    final metadata = state!.currentSource!.tag as AudioMetadata;
-                    timeList.clear();
-                    lyricsList.clear();
-                    for (final text in metadata.lyrics.split('\n')) {
-                      RegExp regex = RegExp(r'\[\s*(.*)\]\s*(.*)');
-                      var match = regex.firstMatch(text);
-                      if (match == null) {
-                        continue;
+                    builder: (context, snapshot) {
+                      final state = snapshot.data;
+                      if (state?.sequence.isEmpty ?? true) {
+                        return const SizedBox();
                       }
-                      String time = match.group(1) ?? "";
-                      String lyrics = match.group(2) ?? "";
-                      final timeD = parseDuration(time);
-                      if (timeD != null) {
-                        timeList.add(timeD);
-                        lyricsList.add(lyrics);
+                      final metadata =
+                          state!.currentSource!.tag as AudioMetadata;
+                      timeList.clear();
+                      lyricsList.clear();
+                      for (final text in metadata.lyrics.split('\n')) {
+                        RegExp regex = RegExp(r'\[\s*(.*)\]\s*(.*)');
+                        var match = regex.firstMatch(text);
+                        if (match == null) {
+                          continue;
+                        }
+                        String time = match.group(1) ?? "";
+                        String lyrics = match.group(2) ?? "";
+                        final timeD = parseDuration(time);
+                        if (timeD != null) {
+                          timeList.add(timeD);
+                          lyricsList.add(lyrics);
+                        }
+                      }
+                      if (lyricsList.isEmpty) {
+                        return const Center(child: Text("无歌词显示"));
                       }
 
-                    }
-                    if(lyricsList.isEmpty) {
-                      return const Center(child: Text("无歌词显示"));
-                    }
+                      return StreamBuilder<int>(
+                          stream: lyricsController.stream,
+                          builder: (context, snapshot) {
 
-                    return Stack(
-                      children: [
-                        Positioned.fill(
-                          child: ListWheelScrollView.useDelegate(
-                              controller: controller,
-                              itemExtent: 40,
-                              childDelegate: ListWheelChildBuilderDelegate(
-                                  builder: (cxt, index) {
-                                    return Text(
-                                      lyricsList[index],
-                                      style: const TextStyle(
-                                          color: Colors.black, fontSize: 18),
-                                    );
-                                  },
-                                  childCount: lyricsList.length)),
-                        ),
-                        const Center(child: Divider(color: Colors.red,thickness: 2.0,indent: 260,endIndent: 260,))
-                      ],
-                    );
-                  }
-                )),
+                            return ListWheelScrollView.useDelegate(
+                                controller: controller,
+                                itemExtent: 40,
+                                childDelegate: ListWheelChildBuilderDelegate(
+                                    builder: (cxt, index) {
+                                      return Text(
+                                        lyricsList[index],
+                                        style: index == snapshot.data
+                                            ? const TextStyle(
+                                                color: Colors.red, fontSize: 20)
+                                            : const TextStyle(
+                                                color: Colors.black,
+                                                fontSize: 16),
+                                      );
+                                    },
+                                    childCount: lyricsList.length));
+                          });
+                    })),
             bottomToolView(
                 onTap: () {
                   Navigator.of(context).pop();
