@@ -7,7 +7,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:suplay_music/widgets/artwork_small.dart';
@@ -142,36 +141,48 @@ mixin MusicMixin<T extends StatefulWidget> on State<T> {
       extensions: <String>['mp3', 'MP3'],
     );
 
-    final List<XFile> files = await openFiles(
-        acceptedTypeGroups: <XTypeGroup>[mp3TypeGroup]);
+    final List<XFile> files =
+        await openFiles(acceptedTypeGroups: <XTypeGroup>[mp3TypeGroup]);
     if (files.isEmpty) return;
-    EasyLoading.show();
-    List<AudioSource> sourceList = [];
+
     for (var f in files) {
-      List<int> mp3Bytes = await f.readAsBytes();
-      MP3Instance mp3instance = MP3Instance(mp3Bytes);
-      if (mp3instance.parseTagsSync()) {
-        final tag = mp3instance.getMetaTags()!;
-        var name = tag["Title"];
-        if (name == null || name == "") {
-          name = f.name.replaceAll(RegExp(r'.mp3|.MP3'), '');
-        }
-        final artist = tag["Artist"];
-        final lyrics = tag["USLT"]?["lyrics"];
-        final artwork = tag["APIC"]?["base64"];
-        final m = AudioMetadata(
-            title: name,
-            artwork: artwork ?? "",
-            artist: artist ?? "未知",
-            lyrics: lyrics ?? '',
-            path: f.path);
-        sourceList.add(AudioSource.uri(Uri.file(f.path), tag: m));
+      final m = await handelMusicFile(f);
+      await playList.add(m);
+      await player.load();
+    }
+  }
+
+  Future<AudioSource> handelMusicFile(XFile file) async {
+    AudioMetadata m;
+    List<int> mp3Bytes = await file.readAsBytes();
+    MP3Instance mp3instance = MP3Instance(mp3Bytes);
+    if (mp3instance.parseTagsSync()) {
+      final tag = mp3instance.getMetaTags()!;
+      var name = tag["Title"];
+      if (name == null || name == "") {
+        name = file.name.replaceAll(RegExp(r'.mp3|.MP3'), '');
       }
+      final artist = tag["Artist"];
+      final lyrics = tag["USLT"]?["lyrics"];
+      final artwork = tag["APIC"]?["base64"];
+      m = AudioMetadata(
+          title: name,
+          artwork: artwork ?? "",
+          artist: artist ?? "未知",
+          lyrics: lyrics ?? '',
+          path: file.path);
+    } else {
+      m = AudioMetadata(
+          title: file.name.replaceAll(RegExp(r'.mp3|.MP3'), ''),
+          artwork: "",
+          artist: "未知",
+          lyrics: '',
+          path: file.path);
     }
 
-    await playList.addAll(sourceList);
-    await player.load();
-    EasyLoading.dismiss();
+    AudioSource model = AudioSource.uri(Uri.file(file.path), tag: m);
+
+    return Future.value(model);
   }
 
   Widget _settingsBtnView() {

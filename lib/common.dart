@@ -13,7 +13,6 @@ void showSliderDialog({
   required double min,
   required double max,
   String valueSuffix = '',
-  // TODO: Replace these two by ValueStream.
   required double value,
   required Stream<double> stream,
   required ValueChanged<double> onChanged,
@@ -25,20 +24,22 @@ void showSliderDialog({
       content: StreamBuilder<double>(
         stream: stream,
         builder: (context, snapshot) => SizedBox(
-          height: 100.0,
+          height: 240.0,
           child: Column(
             children: [
               Text('${snapshot.data?.toStringAsFixed(1)}$valueSuffix',
                   style: const TextStyle(
-                      fontFamily: 'Fixed',
                       fontWeight: FontWeight.bold,
                       fontSize: 24.0)),
-              Slider(
-                divisions: divisions,
-                min: min,
-                max: max,
-                value: snapshot.data ?? value,
-                onChanged: onChanged,
+              RotatedBox(
+                quarterTurns: 3,
+                child: Slider(
+                  divisions: divisions,
+                  min: min,
+                  max: max,
+                  value: snapshot.data ?? value,
+                  onChanged: onChanged,
+                ),
               ),
             ],
           ),

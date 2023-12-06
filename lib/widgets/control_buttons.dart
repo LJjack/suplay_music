@@ -93,7 +93,7 @@ class ControlButtons extends StatelessWidget {
               showSliderDialog(
                 context: context,
                 title: "调节音速",
-                divisions: 10,
+                divisions: 20,
                 min: 0.5,
                 max: 1.5,
                 value: player.speed,

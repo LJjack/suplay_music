@@ -22,16 +22,16 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin, MusicMixin {
-  late AudioPlayer _player;
+class _HomeState extends State<Home>
+    with AutomaticKeepAliveClientMixin, MusicMixin {
+  final AudioPlayer _player = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
-    _player = AudioPlayer();
+
     _init();
   }
-
 
   Future<void> _init() async {
     final session = await AudioSession.instance;
@@ -117,7 +117,6 @@ class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin, MusicMi
 
   ///列表
   Widget _menuList() {
-
     return Expanded(
       child: StreamBuilder<SequenceState?>(
         stream: _player.sequenceStateStream,
@@ -179,13 +178,13 @@ class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin, MusicMi
   }
 
   _showCustomModalBottomSheet() async {
-
     Navigator.of(context).push(ModalBottomSheetRoute(
         constraints: BoxConstraints.tight(MediaQuery.of(context).size),
         builder: (context) {
           return Detail(player: _player);
         },
-        isScrollControlled: true, enableDrag: false));
+        isScrollControlled: true,
+        enableDrag: false));
   }
 
   @override
@@ -193,5 +192,4 @@ class _HomeState extends State<Home> with AutomaticKeepAliveClientMixin, MusicMi
 
   @override
   AudioPlayer get player => _player;
-
 }
